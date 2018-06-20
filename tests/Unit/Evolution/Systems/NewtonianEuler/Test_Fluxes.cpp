@@ -5,7 +5,7 @@
 
 #include <cstddef>
 
-#include "DataStructures/DataVector.hpp"  // IWYU pragma: keep
+#include "DataStructures/DataVector.hpp"
 #include "Evolution/Systems/NewtonianEuler/Fluxes.hpp"
 #include "tests/Unit/Pypp/CheckWithRandomValues.hpp"
 #include "tests/Unit/Pypp/SetupLocalPythonEnvironment.hpp"
@@ -27,6 +27,8 @@ SPECTRE_TEST_CASE("Unit.Evolution.Systems.NewtonianEuler.Fluxes",
   pypp::SetupLocalPythonEnvironment local_python_env{
       "Evolution/Systems/NewtonianEuler"};
 
-  GENERATE_UNINITIALIZED_DATAVECTOR;
-  CHECK_FOR_DATAVECTORS(test_fluxes, (1, 2, 3))
+  const DataVector dv(5);
+  test_fluxes<1>(dv);
+  test_fluxes<2>(dv);
+  test_fluxes<3>(dv);
 }

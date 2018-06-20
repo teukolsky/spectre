@@ -4,6 +4,7 @@
 #include "tests/Unit/TestingFramework.hpp"
 
 #include <cstddef>
+#include <limits>
 
 #include "DataStructures/DataVector.hpp"
 #include "DataStructures/Tensor/TypeAliases.hpp"
@@ -38,7 +39,19 @@ SPECTRE_TEST_CASE(
   pypp::SetupLocalPythonEnvironment local_python_env{
       "Evolution/Systems/NewtonianEuler"};
 
-  GENERATE_UNINITIALIZED_DOUBLE_AND_DATAVECTOR;
-  CHECK_FOR_DOUBLES_AND_DATAVECTORS(test_velocity, (1, 2, 3))
-  CHECK_FOR_DOUBLES_AND_DATAVECTORS(test_primitive_from_conservative, (1, 2, 3))
+  const double d = std::numeric_limits<double>::signaling_NaN();
+  test_velocity<1>(d);
+  test_velocity<2>(d);
+  test_velocity<3>(d);
+  test_primitive_from_conservative<1>(d);
+  test_primitive_from_conservative<2>(d);
+  test_primitive_from_conservative<3>(d);
+
+  const DataVector dv(5);
+  test_velocity<1>(dv);
+  test_velocity<2>(dv);
+  test_velocity<3>(dv);
+  test_primitive_from_conservative<1>(dv);
+  test_primitive_from_conservative<2>(dv);
+  test_primitive_from_conservative<3>(dv);
 }
