@@ -1,0 +1,402 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - a13a92417ad6631d7c56c1ecba731f6c7582de50 - NumericalAlgorithms/DiscontinuousGalerkin/Actions/FluxCommunication.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">SpECTRE Unit Test Code Coverage Report</td></tr>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">NumericalAlgorithms/DiscontinuousGalerkin/Actions</a> - FluxCommunication.hpp<span style="font-size: 80%;"> (source / <a href="FluxCommunication.hpp.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Commit:</td>
+             <td class="headerValue"><a target="_blank" href="https://github.com/sxs-collaboration/spectre/commit/a13a92417ad6631d7c56c1ecba731f6c7582de50">a13a92417ad6631d7c56c1ecba731f6c7582de50</a></td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">78</td>
+            <td class="headerCovTableEntry">78</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2018-07-12 12:55:01</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">43</td>
+            <td class="headerCovTableEntry">43</td>
+            <td class="headerCovTableEntryHi">100.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+</td>
+            <td></td>
+          </tr>
+          <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : // Distributed under the MIT License.</a>
+<span class="lineNum">       2 </span>            : // See LICENSE.txt for details.
+<span class="lineNum">       3 </span>            : 
+<span class="lineNum">       4 </span>            : /// \file
+<span class="lineNum">       5 </span>            : /// Defines actions SendDataForFluxes and ReceiveDataForFluxes
+<span class="lineNum">       6 </span>            : 
+<span class="lineNum">       7 </span>            : #pragma once
+<span class="lineNum">       8 </span>            : 
+<span class="lineNum">       9 </span>            : #include &lt;algorithm&gt;
+<span class="lineNum">      10 </span>            : #include &lt;cstddef&gt;
+<span class="lineNum">      11 </span>            : #include &lt;tuple&gt;
+<span class="lineNum">      12 </span>            : #include &lt;utility&gt;
+<span class="lineNum">      13 </span>            : 
+<span class="lineNum">      14 </span>            : #include &quot;DataStructures/DataBox/DataBox.hpp&quot;
+<span class="lineNum">      15 </span>            : #include &quot;DataStructures/DataBox/DataBoxTag.hpp&quot;
+<span class="lineNum">      16 </span>            : #include &quot;DataStructures/VariablesHelpers.hpp&quot;
+<span class="lineNum">      17 </span>            : #include &quot;Domain/FaceNormal.hpp&quot;
+<span class="lineNum">      18 </span>            : #include &quot;Domain/Tags.hpp&quot;
+<span class="lineNum">      19 </span>            : #include &quot;ErrorHandling/Assert.hpp&quot;
+<span class="lineNum">      20 </span>            : #include &quot;NumericalAlgorithms/DiscontinuousGalerkin/FluxCommunicationTypes.hpp&quot;
+<span class="lineNum">      21 </span>            : #include &quot;NumericalAlgorithms/DiscontinuousGalerkin/Tags.hpp&quot;
+<span class="lineNum">      22 </span>            : #include &quot;Parallel/ConstGlobalCache.hpp&quot;
+<span class="lineNum">      23 </span>            : #include &quot;Parallel/Invoke.hpp&quot;
+<span class="lineNum">      24 </span>            : #include &quot;Utilities/Gsl.hpp&quot;
+<span class="lineNum">      25 </span>            : #include &quot;Utilities/TMPL.hpp&quot;
+<span class="lineNum">      26 </span>            : #include &quot;Utilities/TaggedTuple.hpp&quot;
+<span class="lineNum">      27 </span>            : 
+<span class="lineNum">      28 </span>            : /// \cond
+<span class="lineNum">      29 </span>            : namespace Tags {
+<span class="lineNum">      30 </span>            : template &lt;typename Tag&gt;
+<span class="lineNum">      31 </span>            : struct Magnitude;
+<span class="lineNum">      32 </span>            : template &lt;typename Tag&gt;
+<span class="lineNum">      33 </span>            : struct Next;
+<span class="lineNum">      34 </span>            : template &lt;typename Tag&gt;
+<span class="lineNum">      35 </span>            : struct Normalized;
+<span class="lineNum">      36 </span>            : }  // namespace Tags
+<span class="lineNum">      37 </span>            : // IWYU pragma: no_forward_declare db::DataBox
+<span class="lineNum">      38 </span>            : /// \endcond
+<span class="lineNum">      39 </span>            : 
+<span class="lineNum">      40 </span>            : namespace dg {
+<span class="lineNum">      41 </span>            : namespace Actions {
+<span class="lineNum">      42 </span>            : /// \ingroup ActionsGroup
+<span class="lineNum">      43 </span>            : /// \ingroup DiscontinuousGalerkinGroup
+<span class="lineNum">      44 </span>            : /// \brief Receive boundary data needed for fluxes from neighbors.
+<span class="lineNum">      45 </span>            : ///
+<span class="lineNum">      46 </span>            : /// Uses:
+<span class="lineNum">      47 </span>            : /// - DataBox:
+<span class="lineNum">      48 </span>            : ///   - Metavariables::temporal_id
+<span class="lineNum">      49 </span>            : ///   - Tags::Next&lt;Metavariables::temporal_id&gt;
+<span class="lineNum">      50 </span>            : /// DataBox changes:
+<span class="lineNum">      51 </span>            : /// - Adds: nothing
+<span class="lineNum">      52 </span>            : /// - Removes: nothing
+<span class="lineNum">      53 </span>            : /// - Modifies:
+<span class="lineNum">      54 </span>            : ///   - Tags::Mortars&lt;Tags::Next&lt;Metavariables::temporal_id&gt;, volume_dim&gt;
+<span class="lineNum">      55 </span>            : ///   - Tags::VariablesBoundaryData
+<span class="lineNum">      56 </span>            : ///
+<span class="lineNum">      57 </span>            : /// \see SendDataForFluxes
+<span class="lineNum">      58 </span>            : template &lt;typename Metavariables&gt;
+<span class="lineNum">      59 </span>            : struct ReceiveDataForFluxes {
+<span class="lineNum">      60 </span>            :   using const_global_cache_tags =
+<span class="lineNum">      61 </span>            :       tmpl::list&lt;typename Metavariables::normal_dot_numerical_flux&gt;;
+<span class="lineNum">      62 </span>            : 
+<span class="lineNum">      63 </span>            :  private:
+<span class="lineNum">      64 </span>            :   using flux_comm_types = FluxCommunicationTypes&lt;Metavariables&gt;;
+<span class="lineNum">      65 </span>            : 
+<span class="lineNum">      66 </span>            :  public:
+<span class="lineNum">      67 </span>            :   using inbox_tags = tmpl::list&lt;typename flux_comm_types::FluxesTag&gt;;
+<span class="lineNum">      68 </span>            : 
+<a name="69"><span class="lineNum">      69 </span>            :   template &lt;typename DbTags, typename... InboxTags, typename ArrayIndex,</a>
+<span class="lineNum">      70 </span>            :             typename ActionList, typename ParallelComponent&gt;
+<span class="lineNum">      71 </span><span class="lineCov">        288 :   static auto apply(db::DataBox&lt;DbTags&gt;&amp; box,</span>
+<span class="lineNum">      72 </span>            :                     tuples::TaggedTuple&lt;InboxTags...&gt;&amp; inboxes,
+<span class="lineNum">      73 </span>            :                     const Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; /*cache*/,
+<span class="lineNum">      74 </span>            :                     const ArrayIndex&amp; /*array_index*/,
+<span class="lineNum">      75 </span>            :                     const ActionList /*meta*/,
+<span class="lineNum">      76 </span>            :                     const ParallelComponent* const /*meta*/) noexcept {
+<span class="lineNum">      77 </span><span class="lineCov">        288 :     constexpr size_t volume_dim = Metavariables::system::volume_dim;</span>
+<span class="lineNum">      78 </span>            :     using temporal_id_tag = typename Metavariables::temporal_id;
+<span class="lineNum">      79 </span>            :     using neighbor_temporal_id_tag =
+<span class="lineNum">      80 </span>            :         Tags::Mortars&lt;Tags::Next&lt;temporal_id_tag&gt;, volume_dim&gt;;
+<span class="lineNum">      81 </span><span class="lineCov">        864 :     db::mutate&lt;Tags::VariablesBoundaryData, neighbor_temporal_id_tag&gt;(</span>
+<span class="lineNum">      82 </span><span class="lineCov">        576 :         make_not_null(&amp;box),</span>
+<span class="lineNum">      83 </span>            :         [&amp;inboxes](const gsl::not_null&lt;
+<span class="lineNum">      84 </span>            :                        db::item_type&lt;Tags::VariablesBoundaryData, DbTags&gt;*&gt;
+<span class="lineNum">      85 </span>            :                        mortar_data,
+<span class="lineNum">      86 </span>            :                    const gsl::not_null&lt;db::item_type&lt;neighbor_temporal_id_tag&gt;*&gt;
+<a name="87"><span class="lineNum">      87 </span>            :                        neighbor_next_temporal_ids,</a>
+<span class="lineNum">      88 </span>            :                    const db::item_type&lt;Tags::Next&lt;temporal_id_tag&gt;&gt;&amp;
+<span class="lineNum">      89 </span><span class="lineCov">        288 :                        local_next_temporal_id) noexcept {</span>
+<span class="lineNum">      90 </span><span class="lineCov">        288 :           auto&amp; inbox =</span>
+<span class="lineNum">      91 </span>            :               tuples::get&lt;typename flux_comm_types::FluxesTag&gt;(inboxes);
+<span class="lineNum">      92 </span><span class="lineCov">        573 :           for (auto received_data = inbox.begin();</span>
+<span class="lineNum">      93 </span><span class="lineCov">       1075 :                received_data != inbox.end() and</span>
+<span class="lineNum">      94 </span><span class="lineCov">        502 :                    received_data-&gt;first &lt; local_next_temporal_id;</span>
+<span class="lineNum">      95 </span>            :                received_data = inbox.erase(received_data)) {
+<span class="lineNum">      96 </span><span class="lineCov">        285 :             const auto&amp; receive_temporal_id = received_data-&gt;first;</span>
+<span class="lineNum">      97 </span><span class="lineCov">       1391 :             for (auto&amp; received_mortar_data : received_data-&gt;second) {</span>
+<span class="lineNum">      98 </span><span class="lineCov">       1106 :               const auto mortar_id = received_mortar_data.first;</span>
+<span class="lineNum">      99 </span><span class="lineCov">       1106 :               ASSERT(neighbor_next_temporal_ids-&gt;at(mortar_id) ==</span>
+<span class="lineNum">     100 </span>            :                          receive_temporal_id,
+<span class="lineNum">     101 </span>            :                      &quot;Expected data at &quot;
+<span class="lineNum">     102 </span>            :                      &lt;&lt; neighbor_next_temporal_ids-&gt;at(mortar_id)
+<span class="lineNum">     103 </span>            :                      &lt;&lt; &quot; but received at &quot; &lt;&lt; receive_temporal_id);
+<span class="lineNum">     104 </span><span class="lineCov">       1132 :               neighbor_next_temporal_ids-&gt;at(mortar_id) =</span>
+<span class="lineNum">     105 </span><span class="lineCov">         26 :                   received_mortar_data.second.first;</span>
+<span class="lineNum">     106 </span><span class="lineCov">       2212 :               mortar_data-&gt;at(mortar_id).remote_insert(</span>
+<span class="lineNum">     107 </span>            :                   receive_temporal_id,
+<span class="lineNum">     108 </span><span class="lineCov">       1106 :                   std::move(received_mortar_data.second.second));</span>
+<span class="lineNum">     109 </span>            :             }
+<span class="lineNum">     110 </span>            :           }
+<span class="lineNum">     111 </span>            : 
+<a name="112"><span class="lineNum">     112 </span>            :           // The apparently pointless lambda wrapping this check</a>
+<span class="lineNum">     113 </span>            :           // prevents gcc-7.3.0 from segfaulting.
+<span class="lineNum">     114 </span><span class="lineCov">       1695 :           ASSERT(([</span>
+<span class="lineNum">     115 </span>            :                    &amp;neighbor_next_temporal_ids, &amp;local_next_temporal_id
+<span class="lineNum">     116 </span>            :                  ]() noexcept {
+<span class="lineNum">     117 </span>            :                    return std::all_of(
+<span class="lineNum">     118 </span>            :                        neighbor_next_temporal_ids-&gt;begin(),
+<span class="lineNum">     119 </span>            :                        neighbor_next_temporal_ids-&gt;end(),
+<span class="lineNum">     120 </span>            :                        [&amp;local_next_temporal_id](const auto&amp; next) noexcept {
+<span class="lineNum">     121 </span>            :                          return next.second &gt;= local_next_temporal_id;
+<span class="lineNum">     122 </span>            :                        });
+<span class="lineNum">     123 </span>            :                  }()),
+<span class="lineNum">     124 </span>            :                  &quot;apply called before all data received&quot;);
+<span class="lineNum">     125 </span><span class="lineCov">        288 :           ASSERT(</span>
+<span class="lineNum">     126 </span>            :               inbox.empty() or (inbox.size() == 1 and
+<span class="lineNum">     127 </span>            :                                 inbox.begin()-&gt;first == local_next_temporal_id),
+<span class="lineNum">     128 </span>            :               &quot;Shouldn't have received data that depended upon the step being &quot;
+<span class="lineNum">     129 </span>            :               &quot;taken: Received data at &quot; &lt;&lt; inbox.begin()-&gt;first
+<span class="lineNum">     130 </span>            :               &lt;&lt; &quot; while stepping to &quot; &lt;&lt; local_next_temporal_id);
+<span class="lineNum">     131 </span><span class="lineCov">        288 :         },</span>
+<span class="lineNum">     132 </span>            :         db::get&lt;Tags::Next&lt;temporal_id_tag&gt;&gt;(box));
+<span class="lineNum">     133 </span>            : 
+<span class="lineNum">     134 </span><span class="lineCov">        288 :     return std::forward_as_tuple(std::move(box));</span>
+<span class="lineNum">     135 </span>            :   }
+<a name="136"><span class="lineNum">     136 </span>            : </a>
+<span class="lineNum">     137 </span>            :   template &lt;typename DbTags, typename... InboxTags, typename ArrayIndex&gt;
+<span class="lineNum">     138 </span><span class="lineCov">       1061 :   static bool is_ready(</span>
+<span class="lineNum">     139 </span>            :       const db::DataBox&lt;DbTags&gt;&amp; box,
+<span class="lineNum">     140 </span>            :       const tuples::TaggedTuple&lt;InboxTags...&gt;&amp; inboxes,
+<span class="lineNum">     141 </span>            :       const Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; /*cache*/,
+<span class="lineNum">     142 </span>            :       const ArrayIndex&amp; /*array_index*/) noexcept {
+<span class="lineNum">     143 </span><span class="lineCov">       1061 :     constexpr size_t volume_dim = Metavariables::system::volume_dim;</span>
+<span class="lineNum">     144 </span>            :     using temporal_id = typename Metavariables::temporal_id;
+<span class="lineNum">     145 </span>            : 
+<span class="lineNum">     146 </span><span class="lineCov">       1061 :     const auto&amp; inbox =</span>
+<span class="lineNum">     147 </span>            :         tuples::get&lt;typename flux_comm_types::FluxesTag&gt;(inboxes);
+<span class="lineNum">     148 </span>            : 
+<span class="lineNum">     149 </span><span class="lineCov">       1061 :     const auto&amp; local_next_temporal_id = db::get&lt;Tags::Next&lt;temporal_id&gt;&gt;(box);</span>
+<span class="lineNum">     150 </span><span class="lineCov">       1061 :     const auto&amp; mortars_next_temporal_id =</span>
+<span class="lineNum">     151 </span>            :         db::get&lt;Tags::Mortars&lt;Tags::Next&lt;temporal_id&gt;, volume_dim&gt;&gt;(box);
+<span class="lineNum">     152 </span><span class="lineCov">       3159 :     for (const auto&amp; mortar_id_next_temporal_id : mortars_next_temporal_id) {</span>
+<span class="lineNum">     153 </span><span class="lineCov">       2871 :       const auto&amp; mortar_id = mortar_id_next_temporal_id.first;</span>
+<span class="lineNum">     154 </span><span class="lineCov">       2871 :       auto next_temporal_id = mortar_id_next_temporal_id.second;</span>
+<span class="lineNum">     155 </span><span class="lineCov">       7039 :       while (next_temporal_id &lt; local_next_temporal_id) {</span>
+<span class="lineNum">     156 </span><span class="lineCov">       2857 :         const auto temporal_received = inbox.find(next_temporal_id);</span>
+<span class="lineNum">     157 </span><span class="lineCov">       2857 :         if (temporal_received == inbox.end()) {</span>
+<span class="lineNum">     158 </span><span class="lineCov">        814 :           return false;</span>
+<span class="lineNum">     159 </span>            :         }
+<span class="lineNum">     160 </span><span class="lineCov">       2816 :         const auto mortar_received = temporal_received-&gt;second.find(mortar_id);</span>
+<span class="lineNum">     161 </span><span class="lineCov">       2816 :         if (mortar_received == temporal_received-&gt;second.end()) {</span>
+<span class="lineNum">     162 </span><span class="lineCov">        732 :           return false;</span>
+<span class="lineNum">     163 </span>            :         }
+<span class="lineNum">     164 </span><span class="lineCov">       2084 :         next_temporal_id = mortar_received-&gt;second.first;</span>
+<span class="lineNum">     165 </span>            :       }
+<span class="lineNum">     166 </span>            :     }
+<span class="lineNum">     167 </span><span class="lineCov">        288 :     return true;</span>
+<span class="lineNum">     168 </span>            :   }
+<span class="lineNum">     169 </span>            : };
+<span class="lineNum">     170 </span>            : 
+<span class="lineNum">     171 </span>            : /// \ingroup ActionsGroup
+<span class="lineNum">     172 </span>            : /// \ingroup DiscontinuousGalerkinGroup
+<span class="lineNum">     173 </span>            : /// \brief Send local boundary data needed for fluxes to neighbors.
+<span class="lineNum">     174 </span>            : ///
+<span class="lineNum">     175 </span>            : /// With:
+<span class="lineNum">     176 </span>            : /// - `Interface&lt;Tag&gt; =
+<span class="lineNum">     177 </span>            : ///   Tags::Interface&lt;Tags::InternalDirections&lt;volume_dim&gt;, Tag&gt;`
+<span class="lineNum">     178 </span>            : ///
+<span class="lineNum">     179 </span>            : /// Uses:
+<span class="lineNum">     180 </span>            : /// - ConstGlobalCache: Metavariables::normal_dot_numerical_flux
+<span class="lineNum">     181 </span>            : /// - DataBox:
+<span class="lineNum">     182 </span>            : ///   - Tags::Element&lt;volume_dim&gt;
+<span class="lineNum">     183 </span>            : ///   - Interface&lt;Tags listed in
+<span class="lineNum">     184 </span>            : ///               Metavariables::normal_dot_numerical_flux::type::slice_tags&gt;
+<span class="lineNum">     185 </span>            : ///   - Interface&lt;FluxCommunicationTypes&lt;Metavariables&gt;::normal_dot_fluxes_tag&gt;
+<span class="lineNum">     186 </span>            : ///   - Interface&lt;Tags::Mesh&lt;volume_dim - 1&gt;&gt;
+<span class="lineNum">     187 </span>            : ///   - Interface&lt;Tags::Normalized&lt;Tags::UnnormalizedFaceNormal&lt;volume_dim&gt;&gt;&gt;
+<span class="lineNum">     188 </span>            : ///   - Interface&lt;Tags::Magnitude&lt;Tags::UnnormalizedFaceNormal&lt;volume_dim&gt;&gt;&gt;,
+<span class="lineNum">     189 </span>            : ///   - Metavariables::temporal_id
+<span class="lineNum">     190 </span>            : ///   - Tags::Next&lt;Metavariables::temporal_id&gt;
+<span class="lineNum">     191 </span>            : ///
+<span class="lineNum">     192 </span>            : /// DataBox changes:
+<span class="lineNum">     193 </span>            : /// - Adds: nothing
+<span class="lineNum">     194 </span>            : /// - Removes: nothing
+<span class="lineNum">     195 </span>            : /// - Modifies: Tags::VariablesBoundaryData
+<span class="lineNum">     196 </span>            : ///
+<span class="lineNum">     197 </span>            : /// \see ReceiveDataForFluxes
+<span class="lineNum">     198 </span>            : template &lt;typename Metavariables&gt;
+<span class="lineNum">     199 </span>            : struct SendDataForFluxes {
+<span class="lineNum">     200 </span>            :   using const_global_cache_tags =
+<span class="lineNum">     201 </span>            :       tmpl::list&lt;typename Metavariables::normal_dot_numerical_flux&gt;;
+<span class="lineNum">     202 </span>            : 
+<span class="lineNum">     203 </span>            :   template &lt;typename DbTags, typename... InboxTags,
+<a name="204"><span class="lineNum">     204 </span>            :             typename ArrayIndex, typename ActionList,</a>
+<span class="lineNum">     205 </span>            :             typename ParallelComponent&gt;
+<span class="lineNum">     206 </span><span class="lineCov">        298 :   static auto apply(db::DataBox&lt;DbTags&gt;&amp; box,</span>
+<span class="lineNum">     207 </span>            :                     tuples::TaggedTuple&lt;InboxTags...&gt;&amp; /*inboxes*/,
+<span class="lineNum">     208 </span>            :                     Parallel::ConstGlobalCache&lt;Metavariables&gt;&amp; cache,
+<span class="lineNum">     209 </span>            :                     const ArrayIndex&amp; /*array_index*/,
+<span class="lineNum">     210 </span>            :                     const ActionList /*meta*/,
+<span class="lineNum">     211 </span>            :                     const ParallelComponent* const /*meta*/) noexcept {
+<span class="lineNum">     212 </span>            :     using system = typename Metavariables::system;
+<span class="lineNum">     213 </span><span class="lineCov">        298 :     constexpr size_t volume_dim = system::volume_dim;</span>
+<span class="lineNum">     214 </span>            : 
+<span class="lineNum">     215 </span>            :     using flux_comm_types = FluxCommunicationTypes&lt;Metavariables&gt;;
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span>            :     using interface_normal_dot_fluxes_tag =
+<span class="lineNum">     218 </span>            :         Tags::Interface&lt;Tags::InternalDirections&lt;volume_dim&gt;,
+<span class="lineNum">     219 </span>            :                         typename flux_comm_types::normal_dot_fluxes_tag&gt;;
+<span class="lineNum">     220 </span>            : 
+<span class="lineNum">     221 </span><span class="lineCov">        298 :     const auto&amp; normal_dot_numerical_flux_computer =</span>
+<span class="lineNum">     222 </span>            :         get&lt;typename Metavariables::normal_dot_numerical_flux&gt;(cache);
+<span class="lineNum">     223 </span>            : 
+<span class="lineNum">     224 </span><span class="lineCov">        298 :     auto&amp; receiver_proxy =</span>
+<span class="lineNum">     225 </span>            :         Parallel::get_parallel_component&lt;ParallelComponent&gt;(cache);
+<span class="lineNum">     226 </span>            : 
+<span class="lineNum">     227 </span><span class="lineCov">        298 :     const auto&amp; element = db::get&lt;Tags::Element&lt;volume_dim&gt;&gt;(box);</span>
+<span class="lineNum">     228 </span><span class="lineCov">        298 :     const auto&amp; temporal_id = db::get&lt;typename Metavariables::temporal_id&gt;(box);</span>
+<span class="lineNum">     229 </span><span class="lineCov">        298 :     const auto&amp; next_temporal_id =</span>
+<span class="lineNum">     230 </span>            :         db::get&lt;Tags::Next&lt;typename Metavariables::temporal_id&gt;&gt;(box);
+<span class="lineNum">     231 </span>            : 
+<span class="lineNum">     232 </span><span class="lineCov">       1409 :     for (const auto&amp; direction_neighbors : element.neighbors()) {</span>
+<span class="lineNum">     233 </span><span class="lineCov">       1111 :       const auto&amp; direction = direction_neighbors.first;</span>
+<span class="lineNum">     234 </span><span class="lineCov">       1111 :       const size_t dimension = direction.dimension();</span>
+<span class="lineNum">     235 </span><span class="lineCov">       1111 :       const auto&amp; neighbors_in_direction = direction_neighbors.second;</span>
+<span class="lineNum">     236 </span><span class="lineCov">       1111 :       ASSERT(neighbors_in_direction.size() == 1,</span>
+<span class="lineNum">     237 </span>            :              &quot;h-adaptivity is not supported yet.\nDirection: &quot;
+<span class="lineNum">     238 </span>            :                  &lt;&lt; direction &lt;&lt; &quot;\nDimension: &quot; &lt;&lt; dimension
+<span class="lineNum">     239 </span>            :                  &lt;&lt; &quot;\nNeighbors:\n&quot;
+<span class="lineNum">     240 </span>            :                  &lt;&lt; neighbors_in_direction);
+<span class="lineNum">     241 </span><span class="lineCov">       1111 :       const auto&amp; orientation = neighbors_in_direction.orientation();</span>
+<span class="lineNum">     242 </span><span class="lineCov">       1111 :       const auto&amp; boundary_mesh =</span>
+<span class="lineNum">     243 </span>            :           db::get&lt;Tags::Interface&lt;Tags::InternalDirections&lt;volume_dim&gt;,
+<span class="lineNum">     244 </span><span class="lineCov">       1111 :                                   Tags::Mesh&lt;volume_dim - 1&gt;&gt;&gt;(box)</span>
+<span class="lineNum">     245 </span>            :               .at(direction);
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span>            :       // Everything below here needs to be fixed for
+<span class="lineNum">     248 </span>            :       // hp-adaptivity to handle projections correctly
+<span class="lineNum">     249 </span>            : 
+<span class="lineNum">     250 </span>            :       // We compute the parts of the numerical flux that only depend on data
+<span class="lineNum">     251 </span>            :       // from this side of the mortar now, then package it into a Variables.
+<span class="lineNum">     252 </span>            :       // We store one copy of the Variables and send another, since we need
+<span class="lineNum">     253 </span>            :       // the data on both sides of the mortar.
+<span class="lineNum">     254 </span>            :       using package_arguments = tmpl::append&lt;
+<span class="lineNum">     255 </span>            :           typename db::item_type&lt;
+<span class="lineNum">     256 </span>            :               typename flux_comm_types::normal_dot_fluxes_tag&gt;::tags_list,
+<span class="lineNum">     257 </span>            :           typename Metavariables::normal_dot_numerical_flux::type::slice_tags,
+<span class="lineNum">     258 </span>            :           tmpl::list&lt;
+<span class="lineNum">     259 </span>            :               Tags::Normalized&lt;Tags::UnnormalizedFaceNormal&lt;volume_dim&gt;&gt;&gt;&gt;;
+<span class="lineNum">     260 </span><span class="lineCov">       2222 :       const auto packaged_data = db::apply&lt;tmpl::transform&lt;</span>
+<span class="lineNum">     261 </span>            :           package_arguments,
+<span class="lineNum">     262 </span>            :           tmpl::bind&lt;Tags::Interface, Tags::InternalDirections&lt;volume_dim&gt;,
+<a name="263"><span class="lineNum">     263 </span>            :                      tmpl::_1&gt;&gt;&gt;(</a>
+<span class="lineNum">     264 </span>            :           [&amp;boundary_mesh, &amp;direction,
+<span class="lineNum">     265 </span><span class="lineCov">       6635 :            &amp;normal_dot_numerical_flux_computer ](const auto&amp;... args) noexcept {</span>
+<span class="lineNum">     266 </span><span class="lineCov">       1111 :             typename flux_comm_types::PackagedData ret(</span>
+<span class="lineNum">     267 </span>            :                 boundary_mesh.number_of_grid_points(), 0.0);
+<span class="lineNum">     268 </span><span class="lineCov">       6635 :             normal_dot_numerical_flux_computer.package_data(</span>
+<span class="lineNum">     269 </span><span class="lineCov">       2222 :                 make_not_null(&amp;ret), args.at(direction)...);</span>
+<span class="lineNum">     270 </span><span class="lineCov">       1111 :             return ret;</span>
+<span class="lineNum">     271 </span>            :           },
+<span class="lineNum">     272 </span>            :           box);
+<span class="lineNum">     273 </span>            : 
+<span class="lineNum">     274 </span><span class="lineCov">       2222 :       typename flux_comm_types::LocalData local_data(</span>
+<span class="lineNum">     275 </span>            :           boundary_mesh.number_of_grid_points());
+<span class="lineNum">     276 </span><span class="lineCov">       1111 :       local_data.assign_subset(</span>
+<span class="lineNum">     277 </span><span class="lineCov">       1111 :           db::get&lt;interface_normal_dot_fluxes_tag&gt;(box).at(direction));</span>
+<span class="lineNum">     278 </span><span class="lineCov">       1111 :       local_data.assign_subset(packaged_data);</span>
+<span class="lineNum">     279 </span><span class="lineCov">       1111 :       get&lt;typename flux_comm_types::MagnitudeOfFaceNormal&gt;(local_data) =</span>
+<span class="lineNum">     280 </span>            :           db::get&lt;Tags::Interface&lt;
+<span class="lineNum">     281 </span>            :               Tags::InternalDirections&lt;volume_dim&gt;,
+<span class="lineNum">     282 </span><span class="lineCov">       1111 :               Tags::Magnitude&lt;Tags::UnnormalizedFaceNormal&lt;volume_dim&gt;&gt;&gt;&gt;(box)</span>
+<span class="lineNum">     283 </span>            :               .at(direction);
+<span class="lineNum">     284 </span>            : 
+<span class="lineNum">     285 </span><span class="lineCov">       1111 :       const auto direction_from_neighbor = orientation(direction.opposite());</span>
+<span class="lineNum">     286 </span>            : 
+<span class="lineNum">     287 </span>            :       // orient_variables_on_slice only needs to be done in the case where
+<span class="lineNum">     288 </span>            :       // the data is oriented differently. This needs to improved later.
+<span class="lineNum">     289 </span>            :       // Note: avoiding the same-orientation-on-both-sides copy is possible
+<span class="lineNum">     290 </span>            :       // even with AMR since the quantities are already on the mortar at this
+<span class="lineNum">     291 </span>            :       // point
+<span class="lineNum">     292 </span><span class="lineCov">       2222 :       const auto neighbor_packaged_data = orient_variables_on_slice(</span>
+<span class="lineNum">     293 </span>            :           packaged_data, boundary_mesh.extents(), dimension, orientation);
+<span class="lineNum">     294 </span>            : 
+<span class="lineNum">     295 </span><span class="lineCov">       2222 :       for (const auto&amp; neighbor : neighbors_in_direction) {</span>
+<span class="lineNum">     296 </span><span class="lineCov">       1111 :         const auto mortar_id = std::make_pair(direction, neighbor);</span>
+<span class="lineNum">     297 </span><span class="lineCov">       5555 :         Parallel::receive_data&lt;typename flux_comm_types::FluxesTag&gt;(</span>
+<span class="lineNum">     298 </span><span class="lineCov">       2222 :             receiver_proxy[neighbor], temporal_id,</span>
+<span class="lineNum">     299 </span>            :             std::make_pair(
+<span class="lineNum">     300 </span><span class="lineCov">       2222 :                 std::make_pair(direction_from_neighbor, element.id()),</span>
+<span class="lineNum">     301 </span>            :                 std::make_pair(next_temporal_id, neighbor_packaged_data)));
+<span class="lineNum">     302 </span>            : 
+<span class="lineNum">     303 </span><span class="lineCov">       3333 :         db::mutate&lt;Tags::VariablesBoundaryData&gt;(</span>
+<span class="lineNum">     304 </span><span class="lineCov">       2222 :             make_not_null(&amp;box),</span>
+<span class="lineNum">     305 </span>            :             [&amp;mortar_id, &amp;temporal_id, &amp;local_data](
+<a name="306"><span class="lineNum">     306 </span>            :                 const gsl::not_null&lt;</a>
+<span class="lineNum">     307 </span>            :                     db::item_type&lt;Tags::VariablesBoundaryData, DbTags&gt;*&gt;
+<span class="lineNum">     308 </span><span class="lineCov">       4419 :                     mortar_data) noexcept {</span>
+<span class="lineNum">     309 </span><span class="lineCov">       4419 :               mortar_data-&gt;at(mortar_id).local_insert(temporal_id, local_data);</span>
+<span class="lineNum">     310 </span><span class="lineCov">       1111 :             });</span>
+<span class="lineNum">     311 </span>            :       }  // loop over neighbors_in_direction
+<span class="lineNum">     312 </span>            :     }    // loop over element.neighbors()
+<span class="lineNum">     313 </span>            : 
+<span class="lineNum">     314 </span><span class="lineCov">        298 :     return std::forward_as_tuple(std::move(box));</span>
+<span class="lineNum">     315 </span>            :   }
+<span class="lineNum">     316 </span>            : };
+<span class="lineNum">     317 </span>            : }  // namespace Actions
+<span class="lineNum">     318 </span>            : }  // namespace dg
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.13</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
